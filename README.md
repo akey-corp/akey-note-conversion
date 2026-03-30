@@ -67,7 +67,7 @@ The project is configured to deploy via the `gh-pages` package.
 
 1. Ensure your `package.json` has the correct `homepage` field:
    ```json
-   "homepage": "https://DeweyHammers.github.io/akey-note-conversion",
+   "homepage": "https://[your-username].github.io/akey-note-conversion",
    ```
 2. Run the deploy script:
    ```bash
