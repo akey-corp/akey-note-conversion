@@ -2,6 +2,8 @@
 
 A web-based tool for converting MIDI files into AKEY-compatible JSON format. Built with React, Material UI, and Vite.
 
+**Live Website**: [https://akey-corp.github.io/akey-note-conversion/](https://akey-corp.github.io/akey-note-conversion/)
+
 ## Features
 
 - **MIDI Conversion**: Convert standard MIDI files into structured JSON for AKEY.
@@ -9,70 +11,7 @@ A web-based tool for converting MIDI files into AKEY-compatible JSON format. Bui
 - **Smart Category Selection**: Select from over 60 musical categories or enter your own.
 - **Validation**: Ensures all required metadata (Title, Category, Instrument) is provided before conversion.
 - **JSON Preview**: View the generated JSON structure directly in the browser.
-- **Lighter Dark Mode**: A clean, modern dark theme optimized for visibility and focus.
 - **Easy Download**: One-click download of the resulting JSON file.
-
-## Tech Stack
-
-- **Frontend**: React 19 (TypeScript)
-- **UI Components**: Material UI (MUI)
-- **MIDI Processing**: [@tonejs/midi](https://github.com/Tonejs/Midi)
-- **Build Tool**: Vite
-- **Deployment**: GitHub Pages
-
-## Getting Started
-
-### Prerequisites
-
-- [Node.js](https://nodejs.org/) (v18 or later recommended)
-- [npm](https://www.npmjs.com/)
-
-### Installation
-
-1. Clone the repository:
-
-   ```bash
-   git clone https://github.com/[your-username]/akey-note-conversion.git
-   cd akey-note-conversion
-   ```
-
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-
-### Development
-
-Run the development server:
-
-```bash
-npm run dev
-```
-
-The app will be available at `http://localhost:5173`.
-
-### Build & Deploy
-
-#### Building for Production
-
-```bash
-npm run build
-```
-
-The production-ready files will be in the `dist` directory.
-
-#### Deploying to GitHub Pages
-
-The project is configured to deploy via the `gh-pages` package.
-
-1. Ensure your `package.json` has the correct `homepage` field:
-   ```json
-   "homepage": "https://[your-username].github.io/akey-note-conversion",
-   ```
-2. Run the deploy script:
-   ```bash
-   npm run deploy
-   ```
 
 ## Usage
 

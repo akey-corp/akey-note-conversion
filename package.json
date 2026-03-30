@@ -1,6 +1,7 @@
 {
   "name": "akey-note-conversion",
   "version": "1.0.0",
+  "homepage": "https://akey-corp.github.io/akey-note-conversion/",
   "main": "index.js",
   "type": "module",
   "scripts": {
