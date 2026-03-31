@@ -23,7 +23,3 @@ A web-based tool for converting MIDI files into AKEY-compatible JSON format. Bui
 3. **Convert**: Click **Convert MIDI** to generate the JSON.
 4. **Download**: Once converted, you can **Preview** the JSON or click **Download JSON** to save it.
 5. **Reset**: Use **Convert Another** to clear the form and start a new conversion.
-
-## License
-
-[MIT](LICENSE)
