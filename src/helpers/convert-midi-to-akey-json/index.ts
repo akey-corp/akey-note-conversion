@@ -1,6 +1,6 @@
 import { Midi } from "@tonejs/midi";
 import KEY_MAP from "./key-map";
-import { RecommendedSettings } from "./types";
+import { RecommendedSettings, AkeyJson, MidiPkg } from "./types";
 
 /**
  * Converts MIDI data into AKEY JSON format in the browser.
@@ -11,8 +11,9 @@ import { RecommendedSettings } from "./types";
 export async function convertMidiToAkeyJson(
   midiData: ArrayBuffer | Uint8Array,
   recommendedSettings: RecommendedSettings,
-) {
-  const midi = new Midi(midiData);
+): Promise<AkeyJson> {
+  const MidiConstructor: MidiPkg = Midi;
+  const midi = new MidiConstructor(midiData);
 
   // 1. Collect every single note from every track
   let allNotes: { time: number; midi: number; key: string }[] = [];
@@ -32,14 +33,21 @@ export async function convertMidiToAkeyJson(
   // 2. Sort all notes chronologically
   allNotes.sort((a, b) => a.time - b.time);
 
-  // 3. Group notes that happen at the exact same time
-  const TIME_THRESHOLD = 0.05;
+  // 3. Focus on Melody (Preferring Right Hand / Higher Octaves)
+  // We filter to notes >= 60 (Middle C) to avoid accompaniment jitter skewing the tempo.
+  let melodyOnlyNotes = allNotes.filter((n) => n.midi >= 60);
+  if (melodyOnlyNotes.length < 5) {
+    melodyOnlyNotes = allNotes; // Fallback for very low-pitched songs
+  }
+
+  // 4. Group notes that happen at the exact same time
+  const TIME_THRESHOLD = 0.1;
   let timeBuckets: {
     time: number;
     rawNotes: { midi: number; key: string }[];
   }[] = [];
 
-  allNotes.forEach((note) => {
+  melodyOnlyNotes.forEach((note) => {
     let bucket = timeBuckets.find(
       (b) => Math.abs(b.time - note.time) < TIME_THRESHOLD,
     );
@@ -53,51 +61,60 @@ export async function convertMidiToAkeyJson(
     }
   });
 
-  let rightHandElements: string[] = [];
-  let leftHandElements: string[] = [];
+  // Sort buckets chronologically
+  timeBuckets.sort((a, b) => a.time - b.time);
 
-  // 4 & 5. Smart QWERTY Splitting & Formatting
-  timeBuckets.forEach((bucket) => {
-    // Sort notes from lowest pitch to highest pitch
-    bucket.rawNotes.sort((a, b) => a.midi - b.midi);
+  // 5. Adaptive Phrase Break Logic
+  let gaps: number[] = [];
+  for (let i = 1; i < timeBuckets.length; i++) {
+    gaps.push(timeBuckets[i].time - timeBuckets[i - 1].time);
+  }
 
-    let leftNotes: string[] = [];
-    let rightNotes: string[] = [];
+  // Find median gap to adapt to tempo
+  // Filter out very small gaps (jitter/overlap) to get a better sense of the actual beat
+  const filteredGaps = gaps.filter((g) => g > 0.15);
+  const sortedGaps = [...filteredGaps].sort((a, b) => a - b);
+  const medianGap =
+    sortedGaps.length > 0 ? sortedGaps[Math.floor(sortedGaps.length / 2)] : 0.5;
 
-    // Initial Split: Below Middle C (60) is Left, 60 and above is Right
-    bucket.rawNotes.forEach((note) => {
-      if (note.midi >= 60) rightNotes.push(note.key);
-      else leftNotes.push(note.key);
-    });
+  // A phrase break is defined as a gap significantly larger than the median beat.
+  // We also check the next gap to avoid adding spaces for syncopated notes (e.g. dotted-quarter followed by eighth).
+  const breakThreshold = medianGap * 1.1;
+  const syncopationThreshold = medianGap * 0.5;
 
-    // --- THE QWERTY HAND-SHARING FIX ---
-    if (rightNotes.length >= 2 && leftNotes.length === 0) {
-      const firstRight = rightNotes.shift();
-      if (firstRight) leftNotes.push(firstRight);
-    } else if (leftNotes.length >= 2 && rightNotes.length === 0) {
-      const lastLeft = leftNotes.pop();
-      if (lastLeft) rightNotes.push(lastLeft);
+  let resultString = "";
+  let lastTime = timeBuckets.length > 0 ? timeBuckets[0].time : 0;
+
+  // 6. Convert to Single Typing Sequence
+  timeBuckets.forEach((bucket, index) => {
+    const currentGap = bucket.time - lastTime;
+    const nextGap =
+      index < timeBuckets.length - 1
+        ? timeBuckets[index + 1].time - bucket.time
+        : 100;
+
+    if (
+      index > 0 &&
+      currentGap >= breakThreshold - 0.01 &&
+      nextGap > syncopationThreshold
+    ) {
+      resultString += " ";
     }
 
-    // --- THE QWERTY CHORD LIMITER ---
-    if (rightNotes.length > 2) rightNotes = [rightNotes[rightNotes.length - 1]];
-    if (leftNotes.length > 2) leftNotes = [leftNotes[0]];
+    // Pick the highest pitch note in the bucket as the melody
+    bucket.rawNotes.sort((a, b) => a.midi - b.midi);
+    const melodyNote = bucket.rawNotes[bucket.rawNotes.length - 1];
 
-    // Format Right Hand (Pushing to Array)
-    if (rightNotes.length === 0) rightHandElements.push("-");
-    else if (rightNotes.length === 1) rightHandElements.push(rightNotes[0]);
-    else rightHandElements.push(`[${rightNotes.join("+")}]`); // Uses + for chords
+    if (melodyNote) {
+      resultString += melodyNote.key;
+    }
 
-    // Format Left Hand (Pushing to Array)
-    if (leftNotes.length === 0) leftHandElements.push("-");
-    else if (leftNotes.length === 1) leftHandElements.push(leftNotes[0]);
-    else leftHandElements.push(`[${leftNotes.join("+")}]`); // Uses + for chords
+    lastTime = bucket.time;
   });
 
-  // 6. Build the new AKEY OS JSON Structure
+  // 7. Build the new AKEY OS JSON Structure
   return {
     ...recommendedSettings,
-    key_map_guide_right: rightHandElements.join(", "),
-    key_map_guide_left: leftHandElements.join(", "),
+    key_map_guide: resultString,
   };
 }
